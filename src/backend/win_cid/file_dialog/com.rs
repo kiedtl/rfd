@@ -198,7 +198,7 @@ pub(super) struct IFileDialogV {
         unsafe extern "system" fn(this: *mut c_void, fos: FILEOPENDIALOGOPTIONS) -> HRESULT,
     GetOptions:
         unsafe extern "system" fn(this: *mut c_void, pfos: *mut FILEOPENDIALOGOPTIONS) -> HRESULT,
-    SetDefaultFolder: unsafe extern "system" fn(this: *mut c_void, psi: *mut c_void) -> HRESULT,
+    pub(super) SetDefaultFolder: unsafe extern "system" fn(this: *mut c_void, psi: *mut c_void) -> HRESULT,
     pub(super) SetFolder: unsafe extern "system" fn(this: *mut c_void, psi: *mut c_void) -> HRESULT,
     GetFolder: unsafe extern "system" fn(this: *mut c_void, ppsi: *mut *mut c_void) -> HRESULT,
     GetCurrentSelection:

@@ -112,6 +112,12 @@ impl DialogInner {
     }
 
     #[inline]
+    unsafe fn set_default_folder(&self, folder: &IShellItem) -> Result<()> {
+        let (d, v) = self.fd();
+        wrap_err((v.SetDefaultFolder)(d, folder.0.cast()))
+    }
+
+    #[inline]
     unsafe fn show(&self, parent: Option<HWND>) -> Result<()> {
         let (d, v) = self.fd();
         wrap_err((v.base.Show)(d, parent.unwrap_or_default()))
@@ -219,12 +225,8 @@ impl IDialog {
         Ok(())
     }
 
-    fn set_path(&self, path: &Option<PathBuf>) -> Result<()> {
+    fn _path_to_ishellitem(path: &str) -> Result<IShellItem> {
         const SHELL_ITEM_IID: GUID = GUID::from_u128(0x43826d1e_e718_42ee_bc55_a1e261c37bfe);
-
-        let Some(path) = path.as_ref().and_then(|p| p.to_str()) else {
-            return Ok(());
-        };
 
         // Strip Win32 namespace prefix from the path
         let path = path.strip_prefix(r"\\?\").unwrap_or(path);
@@ -233,21 +235,32 @@ impl IDialog {
 
         unsafe {
             let mut item = std::mem::MaybeUninit::uninit();
-            if wrap_err(SHCreateItemFromParsingName(
+            wrap_err(SHCreateItemFromParsingName(
                 wide_path.as_ptr(),
                 std::ptr::null_mut(),
                 &SHELL_ITEM_IID,
                 item.as_mut_ptr(),
-            ))
-            .is_ok()
-            {
-                let item = IShellItem(item.assume_init().cast());
-                // For some reason SetDefaultFolder(), does not guarantees default path, so we use SetFolder
-                self.0.set_folder(&item)?;
-            }
+            ))?;
+            Ok(IShellItem(item.assume_init().cast()))
         }
+    }
 
-        Ok(())
+    fn set_path(&self, path: &Option<PathBuf>) -> Result<()> {
+        let Some(path) = path.as_ref().and_then(|p| p.to_str()) else {
+            return Ok(());
+        };
+
+        let item = Self::_path_to_ishellitem(path)?;
+        unsafe { self.0.set_folder(&item) }
+    }
+
+    fn set_default_path(&self, path: &Option<PathBuf>) -> Result<()> {
+        let Some(path) = path.as_ref().and_then(|p| p.to_str()) else {
+            return Ok(());
+        };
+
+        let item = Self::_path_to_ishellitem(path)?;
+        unsafe { self.0.set_default_folder(&item) }
     }
 
     fn set_file_name(&self, file_name: &Option<String>) -> Result<()> {
@@ -291,6 +304,7 @@ impl IDialog {
 
         dialog.add_filters(&opt.filters)?;
         dialog.set_path(&opt.starting_directory)?;
+        dialog.set_default_path(&opt.default_starting_directory)?;
         dialog.set_file_name(&opt.file_name)?;
         dialog.set_title(&opt.title)?;
 
@@ -302,6 +316,7 @@ impl IDialog {
 
         dialog.add_filters(&opt.filters)?;
         dialog.set_path(&opt.starting_directory)?;
+        dialog.set_default_path(&opt.default_starting_directory)?;
         dialog.set_file_name(&opt.file_name)?;
         dialog.set_title(&opt.title)?;
 
@@ -312,6 +327,7 @@ impl IDialog {
         let dialog = IDialog::new_open_dialog(opt)?;
 
         dialog.set_path(&opt.starting_directory)?;
+        dialog.set_default_path(&opt.default_starting_directory)?;
         dialog.set_title(&opt.title)?;
 
         unsafe {
@@ -325,6 +341,7 @@ impl IDialog {
         let dialog = IDialog::new_open_dialog(opt)?;
 
         dialog.set_path(&opt.starting_directory)?;
+        dialog.set_default_path(&opt.default_starting_directory)?;
         dialog.set_title(&opt.title)?;
         let opts = FOS_PICKFOLDERS | FOS_ALLOWMULTISELECT;
 
@@ -340,6 +357,7 @@ impl IDialog {
 
         dialog.add_filters(&opt.filters)?;
         dialog.set_path(&opt.starting_directory)?;
+        dialog.set_default_path(&opt.default_starting_directory)?;
         dialog.set_file_name(&opt.file_name)?;
         dialog.set_title(&opt.title)?;
 

@@ -20,6 +20,7 @@ pub(crate) struct Filter {
 pub struct FileDialog {
     pub(crate) filters: Vec<Filter>,
     pub(crate) starting_directory: Option<PathBuf>,
+    pub(crate) default_starting_directory: Option<PathBuf>,
     pub(crate) file_name: Option<String>,
     pub(crate) title: Option<String>,
     pub(crate) parent: Option<RawWindowHandle>,
@@ -66,6 +67,18 @@ impl FileDialog {
             self.starting_directory = None;
         } else {
             self.starting_directory = Some(path.into());
+        }
+        self
+    }
+
+    /// Set default starting directory of the dialog. Supported platforms:
+    ///   * Windows
+    pub fn set_default_directory<P: AsRef<Path>>(mut self, path: P) -> Self {
+        let path = path.as_ref();
+        if path.to_str().map(|p| p.is_empty()).unwrap_or(false) {
+            self.default_starting_directory = None;
+        } else {
+            self.default_starting_directory = Some(path.into());
         }
         self
     }
