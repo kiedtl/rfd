@@ -204,6 +204,13 @@ impl AsyncFileDialog {
         self
     }
 
+    /// Set default starting directory of the dialog. Supported platforms:
+    ///   * Windows
+    pub fn set_default_directory<P: AsRef<Path>>(mut self, path: P) -> Self {
+        self.file_dialog = self.file_dialog.set_default_directory(path);
+        self
+    }
+
     /// Set starting file name of the dialog. Supported platforms:
     ///  * Windows
     ///  * Linux
